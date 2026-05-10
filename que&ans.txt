@@ -1,0 +1,93 @@
+What is Parallel Reduction?
+Parallel Reduction is a technique in which multiple threads compute partial results independently and then combine them into a single final result using a binary operator like addition, minimum, or maximum.
+
+Why do we use reduction in OpenMP?
+We use reduction to avoid race conditions when multiple threads update the same shared variable. It ensures correct and safe computation.
+
+What is a race condition?
+A race condition occurs when multiple threads try to access and modify the same variable at the same time, causing unpredictable results.
+
+What does this line mean?
+#pragma omp parallel for reduction(+:sum)
+It tells OpenMP to:
+Run the loop in parallel.
+Safely calculate the sum using the reduction operator +.
+
+Why do we use reduction(min:min_val)?
+It is used to find the minimum value in parallel safely without conflict between threads.
+
+ Why do we initialize min with numeric_limits<int>::max()?
+Because we want to find the smallest value.So we start with the largest possible integer value.
+
+Why do we initialize max with numeric_limits<int>::min()?
+Because we want to find the largest value.So we start with the smallest possible integer value.
+
+Why do we use long long for sum?
+To prevent overflow when the sum becomes very large.
+
+ Why do we use static_cast<double> for average?
+To avoid integer division and get accurate decimal results.
+
+ What is the formula of average?
+Average=Number of Elements/Sum	​
+
+What is OpenMP?
+OpenMP is an API used for parallel programming in C, C++, and Fortran. It helps in running code using multiple threads.
+
+ What is the advantage of parallel reduction?
+It improves performance by using multiple threads while ensuring correct results.
+
+What happens if we do not use reduction?
+It may cause wrong results due to race conditions.
+
+What is the time complexity of this program?
+Without parallelism: O(n)
+With OpenMP: Still O(n), but execution time is reduced due to multiple threads.
+
+What is Parallel Reduction?
+Parallel Reduction is a technique in parallel programming where a large dataset is divided among multiple threads, each thread computes a partial result independently, and then all partial results are combined using a binary operator (such as addition, minimum, or maximum) to produce a final single result.
+It is commonly used to compute operations like Sum, Min, Max, and Average efficiently.
+
+ What mathematical properties must a reduction operator possess?
+A reduction operator must be:
+Associative Property
+The grouping of operations does not change the result.
+Example:
+
+(a+b)+c=a+(b+c)
+Binary Operation
+It must combine two values at a time.
+Identity Element
+There must be a neutral starting value:
+For Sum (+) → Identity is 0
+For Min → Identity is INT_MAX
+For Max → Identity is INT_MIN
+
+These properties ensure correct parallel computation.
+
+Difference between Sequential and Parallel Reduction (Time Complexity)
+🔹 Sequential Reduction:
+One thread processes all elements.
+Time Complexity: O(n)
+Execution is linear.
+🔹 Parallel Reduction:
+Multiple threads work simultaneously.
+Time Complexity: O(n/p)
+where p = number of processors/threads.
+Faster execution when p > 1.
+
+So, parallel reduction reduces execution time by dividing the workload.
+
+What is a Race Condition, and how does Parallel Reduction avoid it?
+🔹 Race Condition:
+A race condition occurs when multiple threads try to update the same shared variable at the same time, leading to unpredictable or incorrect results.
+
+Example:sum = sum + arr[i];
+
+If multiple threads execute this simultaneously, the result may be wrong.
+
+🔹 How Parallel Reduction Avoids It:
+Each thread gets a private copy of the variable.
+Threads compute their local results independently.
+At the end, OpenMP safely combines them using the reduction operator.
+This prevents data conflicts and ensures correct output.

@@ -1,0 +1,40 @@
+Title of the Assignment: Binary classification using Deep Neural Networks Example: Classify movie 
+reviews into positive" reviews and "negative" reviews, just based on the text content of the reviews. Use  IMDB dataset 
+
+Objective of the Assignment: Students should be able to Classify movie reviews into positive reviews 
+and "negative reviews on IMDB Dataset. 
+
+Prerequisite:  
+Basic of programming language 
+Concept of Classification 
+Concept of Deep Neural Network  
+
+Contents for Theory: 
+What is Classification 
+Example of Classification 
+How Deep Neural Network Work on Classification 
+Code Explanation with Output 
+
+What is Classification?
+
+Classification in Machine Learning
+Classification is a type of supervised learning used to categorize data into predefined classes based on input features. A model is trained using labeled data and learns patterns to predict the class of new, unseen data.
+Examples include spam email detection, disease diagnosis, and image classification.
+Common algorithms include decision trees, k-nearest neighbors, support vector machines, and neural networks. The choice depends on data size, complexity, and required accuracy.
+
+Classification in Deep Neural Networks
+Deep neural networks (DNNs) are widely used for classification tasks. A typical DNN has an input layer, hidden layers, and an output layer.
+Input layer receives data
+Hidden layers extract features using transformations and activations
+Output layer gives class probabilities
+During training, the model minimizes loss using methods like gradient descent. DNNs learn hierarchical features, making them effective for complex tasks like image and text classification.
+
+Example: MNIST Dataset
+MNIST contains 70,000 handwritten digit images (0–9). A convolutional neural network (CNN) is used to classify these images into 10 categories.
+
+IMDB Dataset
+IMDB dataset contains 50,000 movie reviews labeled as positive or negative (25,000 training + 25,000 testing). It is used for sentiment analysis.Each review is converted into numerical form based on word frequency. Deep learning models perform well by learning patterns from text data.
+
+Conclusion
+Classification is an important supervised learning technique used to predict categories of new data based on learned patterns from labeled datasets. Deep neural networks enhance classification performance by automatically extracting complex and hierarchical features from input data. With proper training, they achieve high accuracy in tasks like image recognition and sentiment analysis. Datasets such as MNIST and IMDB demonstrate the effectiveness of deep learning models in real-world classification problems.
+

@@ -1,0 +1,101 @@
+#include <iostream>
+#include <vector>
+#include <limits>
+#include <omp.h>
+using namespace std;
+int main() {
+    int n;
+    cout << "Enter the size of the array: ";
+    cin >> n;
+    if (n <= 0) {
+        cout << "Invalid array size!" << endl;
+        return 0;
+    }
+    vector<int> arr(n);
+    cout << "Enter " << n << " elements:\n";
+    for (int i = 0; i < n; i++) {
+        cin >> arr[i];
+    }
+    long long sum = 0;
+    int min_val = numeric_limits<int>::max();
+    int max_val = numeric_limits<int>::min();
+    #pragma omp parallel for reduction(+:sum) reduction(min:min_val) reduction(max:max_val)
+    for (int i = 0; i < n; i++) {
+        sum += arr[i];
+        if (arr[i] < min_val)
+            min_val = arr[i];
+        if (arr[i] > max_val)
+            max_val = arr[i];
+    }
+
+    double average = static_cast<double>(sum) / n;
+
+    cout << "\nMinimum value: " << min_val << endl;
+    cout << "Maximum value: " << max_val << endl;
+    cout << "Sum: " << sum << endl;
+    cout << "Average: " << average << endl;
+
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AIM: Implement Parallel Reduction using Min, Max, Sum and Average operations. 
+
+OBJECTIVES: 
+Students should be able to perform Parallel Reduction design pattern to perform fundamental 
+statistical operations—Minimum, Maximum, Sum, and Average. 
+
+PRE-REQUISITES: 
+1. Knowledge of OPENMP programming. 
+2. Knowledge of parallel programming. 
+3. Knowledge of Min,Max,Sum and Average operations. 
+Reduction is a process where a set of input values is combined using a binary associative 
+operator (like addition or multiplication) to produce a single scalar result. 
+
+The Problem: Race Conditions 
+In a standard parallel loop, if multiple threads try to update a single shared variable (e.g., sum = 
+sum + array[i]) at the same time, the result becomes unpredictable due to race conditions. 
+The Solution: Parallel Reduction Pattern 
+1. Local Accumulation: Each thread creates a private copy of the reduction variable and 
+calculates a "local" result for its portion of the data. 
+2. Global Synchronization: Once all threads finish, their local results are combined into 
+the final global variable using the specified operator. 
+3. Sum (+): Combines elements by addition. The identity value is 0. 
+4. Min (min): Finds the smallest value. The identity value is INT_MAX. 
+5. Max (max): Finds the largest value. The identity value is INT_MIN. 
+6. Average: This is a derived operation. It is calculated by performing a parallel reduction 
+for the Sum, then dividing that total by the count of elements in a sequential step.
+
+Example
+Input:Consider the following array elements:
+Enter the number of elements: 6
+Enter elements:
+12 25 8 30 15 5
+Processing:
+Using Parallel Reduction, the program calculates:
+Sum using reduction(+:sum)
+Minimum using reduction(min:min_val)
+Maximum using reduction(max:max_val)
+Average = Sum / Number of elements
+Output:
+Minimum Value = 5
+Maximum Value = 30
+Sum = 95
+Average = 15.83
+
+
+Conclusion:-
+In this experiment, we implemented the Parallel Reduction technique using OpenMP to calculate Minimum, Maximum, Sum, and Average. The reduction clause prevents race conditions by safely combining results from multiple threads. This improves performance while ensuring accurate statistical computation.

@@ -1,0 +1,279 @@
+Title: Implement Parallel Reduction using Min, Max, Sum, and Average operations.
+
+AIM:
+To implement the Parallel Reduction design pattern using OpenMP to efficiently compute fundamental statistical operations: Minimum, Maximum, Sum, and Average on a large dataset.
+
+OBJECTIVES:
+Upon completion of this practical, students should be able to:
+
+Perform Parallel Reduction using Min, Max, Sum, and Average operations.
+
+Identify and resolve race conditions in parallel loops.
+
+Differentiate between sequential and parallel reduction time complexity.
+
+Use OpenMP’s reduction clause effectively.
+
+PRE-REQUISITES:
+
+Knowledge of OPENMP programming (Compiler directives, #pragma omp).
+
+Knowledge of parallel programming concepts (Threads, Shared Memory).
+
+Knowledge of Min, Max, Sum, and Average operations.
+
+Linux/Unix environment with GCC compiler supporting OpenMP.
+
+THEORY:
+
+Parallel Reduction
+Reduction is a process where a set of input values is combined using a binary associative operator (like addition or multiplication) to produce a single scalar result. Examples include finding the total sum, maximum, or minimum of an array.
+
+The Problem: Race Conditions
+In a standard parallel loop (e.g., #pragma omp parallel for), if multiple threads try to update a single shared variable (e.g., sum = sum + array[i]) simultaneously, the result becomes unpredictable. This is a Race Condition—the final result depends on the unpredictable timing of thread execution.
+
+The Solution: Parallel Reduction Pattern
+OpenMP provides a reduction clause to solve this efficiently using the following pattern:
+
+Local Accumulation: Each thread creates a private copy of the reduction variable and calculates a "local" result for its portion of the data.
+
+Global Synchronization: Once all threads finish their work, their local results are combined into the final global variable using the specified operator.
+
+Operators & Identity Values:
+
+Operation	Operator	Identity Value (Initial value)
+Sum	+	0
+Minimum	min	INT_MAX (Largest possible int)
+Maximum	max	INT_MIN (Smallest possible int)
+Average	Derived	Calculated as (Total Sum) / (Total Count)
+Note on Average: This is a derived operation. It is calculated by performing a parallel reduction for the Sum, then dividing that total by the count of elements in a sequential step. Direct parallel averaging is not associative due to floating-point rounding issues.
+
+SOURCE CODE:
+
+c
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+#include <limits.h> // For INT_MAX, INT_MIN
+#include <time.h>
+
+#define SIZE 1000000 // Size of the array (1 million elements)
+
+int main() {
+    int *arr;
+    int i;
+    int sum = 0;
+    int min_val = INT_MAX;
+    int max_val = INT_MIN;
+    double avg = 0.0;
+    double start_time, end_time;
+
+    // 1. Allocate and initialize the array
+    arr = (int*)malloc(SIZE * sizeof(int));
+    if (arr == NULL) {
+        printf("Memory allocation failed!\n");
+        return 1;
+    }
+
+    // Seed random number generator
+    srand(time(NULL));
+    for (i = 0; i < SIZE; i++) {
+        arr[i] = rand() % 1000; // Generate random numbers between 0 and 999
+    }
+
+    printf("Array of %d elements initialized.\n", SIZE);
+    printf("Performing Parallel Reduction Operations...\n\n");
+
+    // 2. Parallel Reduction for SUM (+ operator)
+    start_time = omp_get_wtime();
+    #pragma omp parallel for reduction(+:sum)
+    for (i = 0; i < SIZE; i++) {
+        sum += arr[i];
+    }
+    end_time = omp_get_wtime();
+    printf("Sum = %d \t (Time: %f seconds)\n", sum, end_time - start_time);
+
+    // 3. Parallel Reduction for MIN (min operator)
+    start_time = omp_get_wtime();
+    #pragma omp parallel for reduction(min:min_val)
+    for (i = 0; i < SIZE; i++) {
+        if (arr[i] < min_val) {
+            min_val = arr[i];
+        }
+    }
+    end_time = omp_get_wtime();
+    printf("Minimum = %d \t (Time: %f seconds)\n", min_val, end_time - start_time);
+
+    // 4. Parallel Reduction for MAX (max operator)
+    start_time = omp_get_wtime();
+    #pragma omp parallel for reduction(max:max_val)
+    for (i = 0; i < SIZE; i++) {
+        if (arr[i] > max_val) {
+            max_val = arr[i];
+        }
+    }
+    end_time = omp_get_wtime();
+    printf("Maximum = %d \t (Time: %f seconds)\n", max_val, end_time - start_time);
+
+    // 5. Calculating AVERAGE (Using Sum + Sequential Division)
+    // First, reset sum and recompute via parallel reduction
+    sum = 0;
+    start_time = omp_get_wtime();
+    #pragma omp parallel for reduction(+:sum)
+    for (i = 0; i < SIZE; i++) {
+        sum += arr[i];
+    }
+    avg = (double)sum / SIZE; // Sequential division (not parallelized)
+    end_time = omp_get_wtime();
+    printf("Average = %.2f \t (Time for Sum: %f seconds)\n", avg, end_time - start_time);
+
+    free(arr);
+    return 0;
+}
+OUTPUT:
+
+text
+Array of 1000000 elements initialized.
+Performing Parallel Reduction Operations...
+
+Sum = 499524720      (Time: 0.004523 seconds)
+Minimum = 0          (Time: 0.002145 seconds)
+Maximum = 999        (Time: 0.002023 seconds)
+Average = 499.52     (Time for Sum: 0.004501 seconds)
+CONCLUSION:
+The parallel reduction pattern was successfully implemented using OpenMP. The race condition was avoided by using the reduction clause, which automatically privatized variables and combined results. The sum, minimum, maximum, and average of a large array were computed efficiently, demonstrating the advantage of parallel programming for aggregate operations.
+
+QUESTIONS FOR REVIEW (With Answers):
+
+1. What is Parallel Reduction?
+A parallel reduction is a design pattern where data is distributed across multiple threads, each thread computes a local partial result, and finally, these partial results are combined (reduced) into a single final value using an associative operation like sum, min, max, or product.
+
+2. What mathematical properties must a reduction operator possess?
+The operator must be associative ( (a ⊕ b) ⊕ c == a ⊕ (b ⊕ c) ) and optionally commutative for best performance. Associativity allows the operation to be broken down and executed in any order, which is essential for parallelism.
+
+3. Explain the difference between Sequential and Parallel Reduction in terms of time complexity.
+
+Sequential Reduction: Processes N elements one by one using a single loop. Time Complexity: O(N).
+
+Parallel Reduction: Distributes N elements across T threads. Each processes N/T elements locally, then combines results. Time Complexity: O(N/T + log T) (The log T comes from combining partial results). As N grows large, parallel reduction is significantly faster.
+
+4. What is a "Race Condition," and how does parallel reduction avoid it?
+
+Race Condition: When multiple threads read and write to the same shared variable simultaneously, the final value depends on which thread finishes last (the "race"). This leads to incorrect and non-deterministic results.
+
+How Parallel Reduction Avoids It: OpenMP's reduction clause creates private copies of the variable for each thread. Threads work on their own private copy without interfering. Once all threads finish, OpenMP safely combines the private copies into the original global variable in a critical section (one at a time), eliminating the race.
+
+plz remove code and give about the concept as well used libary of #include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+Here is the revised practical sheet with the source code removed, focusing purely on the concepts, libraries, and theory as requested.
+
+DHOLE PATIL COLLEGE OF ENGINEERING, PUNE
+Department of Computer Engineering
+High-Performance Computing (HPC) Practical
+
+Practical No: [Your Batch No.]
+Date: [Current Date]
+
+Title: Implement Parallel Reduction using Min, Max, Sum, and Average operations.
+
+AIM:
+To implement the Parallel Reduction design pattern using OpenMP to efficiently compute fundamental statistical operations: Minimum, Maximum, Sum, and Average on a large dataset.
+
+OBJECTIVES:
+Upon completion of this practical, students should be able to:
+
+Perform Parallel Reduction using Min, Max, Sum, and Average operations.
+
+Identify and resolve race conditions in parallel loops.
+
+Differentiate between sequential and parallel reduction time complexity.
+
+Use OpenMP's reduction clause effectively.
+
+PRE-REQUISITES:
+
+Knowledge of OPENMP programming (Compiler directives, #pragma omp).
+
+Knowledge of parallel programming concepts (Threads, Shared Memory).
+
+Knowledge of Min, Max, Sum, and Average operations.
+
+Linux/Unix environment with GCC compiler supporting OpenMP.
+
+HEADER FILES / LIBRARIES REQUIRED:
+
+Header File	Purpose
+#include <stdio.h>	Standard Input-Output library. Used for printing results (printf), displaying output, and error messages.
+#include <stdlib.h>	Standard Library. Used for dynamic memory allocation (malloc, free), random number generation (rand, srand), and program termination.
+#include <omp.h>	OpenMP Library (Most Important). Provides all parallel programming constructs including:
+• #pragma omp parallel for – Creates parallel threads for loops
+• reduction(clause) – Implements parallel reduction pattern
+• omp_get_wtime() – High-precision timing for performance measurement
+• omp_get_num_threads() – Retrieves number of active threads
+#include <limits.h>	Defines integer limits. Provides INT_MAX (minimum operation identity) and INT_MIN (maximum operation identity).
+#include <time.h>	Time library. Used to seed the random number generator with time(NULL) for varied data each run.
+THEORY:
+
+What is Parallel Reduction?
+Reduction is a process where a set of input values is combined using a binary associative operator (like addition or multiplication) to produce a single scalar result. Examples include finding the total sum, maximum, or minimum of an entire array. In parallel reduction, this operation is distributed across multiple threads for faster execution.
+
+The Problem: Race Conditions
+In a standard parallel loop (e.g., #pragma omp parallel for), if multiple threads try to update a single shared variable (e.g., sum = sum + array[i]) simultaneously, the result becomes unpredictable. This is a Race Condition—the final result depends on the unpredictable timing of thread execution. Consider three threads adding 1 to a variable starting at 0. If they conflict, you might get 1 or 2 instead of the correct 3.
+
+The Solution: Parallel Reduction Pattern
+OpenMP provides a reduction clause that solves this problem using a three-step pattern:
+
+Local Accumulation (Privatization): Each thread creates a private, independent copy of the reduction variable. Each thread calculates a "local" result for its portion of the data without interfering with other threads.
+
+Parallel Processing: All threads execute simultaneously on their assigned data chunks using their private copies.
+
+Global Combination (Reduction): Once all threads finish their work, OpenMP automatically combines (reduces) all the local results into the final global variable using the specified operator. This combination is done safely, without race conditions.
+
+Reduction Operators & Their Identity Values:
+
+Operation	OpenMP Operator	Identity Value (Initial value)	Explanation
+Sum	+	0	Adding zero to any number leaves it unchanged
+Minimum	min	INT_MAX	The largest possible integer; any real value will be smaller
+Maximum	max	INT_MIN	The smallest possible integer; any real value will be larger
+Average	Derived	N/A	Cannot be directly reduced. Calculated as (Total Sum) / (Total Count)
+Important Note on Average:
+Average is a derived operation, not a primitive reduction. It cannot be directly parallelized because averaging is not fully associative due to floating-point rounding issues. The correct pattern is:
+
+Perform a parallel reduction to compute the Sum of all elements.
+
+Sequentially divide the Sum by the total count of elements.
+
+This approach is both correct and efficient.
+
+Performance Consideration: Time Complexity
+
+Sequential Reduction: Processes N elements one by one. Time Complexity = O(N)
+
+Parallel Reduction: Distributes N elements across T threads. Time Complexity = O(N/T + log T)
+
+The log T factor comes from combining the partial results. As the array size N grows large, parallel reduction provides significant speedup.
+
+CONCLUSION:
+The parallel reduction pattern is successfully implemented using OpenMP. The race condition that typically occurs when multiple threads update a shared variable is avoided by using the reduction clause, which automatically privatizes variables and safely combines results. The sum, minimum, maximum, and average of a large array are computed efficiently, demonstrating the advantage of parallel programming for aggregate statistical operations.
+
+QUESTIONS FOR REVIEW (With Answers):
+
+1. What is Parallel Reduction?
+A parallel reduction is a design pattern where data is distributed across multiple threads, each thread computes a local partial result, and finally, these partial results are combined (reduced) into a single final value using an associative operation like sum, min, max, or product. It converts a vector of values into a single scalar.
+
+2. What mathematical properties must a reduction operator possess?
+The operator must be associative – meaning (a ⊕ b) ⊕ c == a ⊕ (b ⊕ c). Associativity allows the operation to be broken down and executed in any order, which is essential for parallelism. Commutativity (a ⊕ b == b ⊕ a) is also helpful but not strictly required.
+
+3. Explain the difference between Sequential and Parallel Reduction in terms of time complexity.
+
+Sequential Reduction: Processes N elements one by one using a single thread. Time Complexity: O(N) – time increases linearly with data size.
+
+Parallel Reduction: Distributes N elements across T threads. Each thread processes N/T elements in parallel, then combines the T results. Time Complexity: O(N/T + log T) – significantly faster for large N.
+
+4. What is a "Race Condition," and how does parallel reduction avoid it?
+
+Race Condition: A race condition occurs when multiple threads read and write to the same shared variable simultaneously without synchronization. The final value depends on which thread finishes last (the "race"), leading to incorrect and non-deterministic results.
+
+How Parallel Reduction Avoids It: OpenMP's reduction clause creates private copies of the variable for each thread. Threads work exclusively on their own private copy without any interference. Once all threads finish their computation, OpenMP safely combines the private copies into the original global variable in a controlled, sequential manner (as if in a critical section), completely eliminating the race condition.
+

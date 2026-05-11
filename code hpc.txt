@@ -1,0 +1,140 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+#include <time.h> 
+#define SIZE 100000
+
+int main() {
+    int arr[SIZE];
+
+    // Initialize array
+ srand(time(NULL));
+    for(int i = 0; i < SIZE; i++) {
+        arr[i] = rand() % 1000;
+    }
+
+    int min = arr[0];
+    int max = arr[0];
+    long long sum = 0;
+    double avg;
+
+    double start, end;
+
+    start = omp_get_wtime();
+
+    #pragma omp parallel for reduction(+:sum) reduction(min:min) reduction(max:max)
+    for(int i = 0; i < SIZE; i++) {
+        sum += arr[i];
+
+        if(arr[i] < min)
+            min = arr[i];
+
+        if(arr[i] > max)
+            max = arr[i];
+    }
+
+    avg = (double)sum / SIZE;
+
+    end = omp_get_wtime();
+
+    // Output results
+    printf("Minimum: %d\n", min);
+    printf("Maximum: %d\n", max);
+    printf("Sum: %lld\n", sum);
+    printf("Average: %f\n", avg);
+    printf("Execution Time: %f seconds\n", end - start);
+
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+int main() {
+    int SIZE;
+    int *arr;  // Dynamic array pointer
+    
+    // Get array size from user
+    printf("Enter the number of elements: ");
+    scanf("%d", &SIZE);
+    
+    if(SIZE <= 0) {
+        printf("Invalid size! Exiting...\n");
+        return 1;
+    }
+    
+    // Dynamically allocate memory for array
+    arr = (int*)malloc(SIZE * sizeof(int));
+    if(arr == NULL) {
+        printf("Memory allocation failed!\n");
+        return 1;
+    }
+    
+    // Get array elements from user
+    printf("Enter %d elements:\n", SIZE);
+    for(int i = 0; i < SIZE; i++) {
+        printf("arr[%d] = ", i);
+        scanf("%d", &arr[i]);
+    }
+    
+    // Initialize min and max with first element
+    int min = arr[0];
+    int max = arr[0];
+    long long sum = 0;
+    double avg;
+    
+    double start, end;
+    
+    start = omp_get_wtime();
+    
+    #pragma omp parallel for reduction(+:sum) reduction(min:min) reduction(max:max)
+    for(int i = 0; i < SIZE; i++) {
+        sum += arr[i];
+        
+        if(arr[i] < min)
+            min = arr[i];
+        
+        if(arr[i] > max)
+            max = arr[i];
+    }
+    
+    avg = (double)sum / SIZE;
+    
+    end = omp_get_wtime();
+    
+    // Output results
+    printf("\n========== RESULTS ==========\n");
+    printf("Minimum: %d\n", min);
+    printf("Maximum: %d\n", max);
+    printf("Sum: %lld\n", sum);
+    printf("Average: %.2f\n", avg);
+    printf("Execution Time: %f seconds\n", end - start);
+    printf("=============================\n");
+    
+    // Free allocated memory
+    free(arr);
+    
+    return 0;
+}
+
+
+
+sudo dnf install gcc
+sudo dnf install libomp-devel
+sudo dnf install openmpi openmpi-devel
+gcc -fopenmp hpc_program.c -o hpc_program
+./hpc_program

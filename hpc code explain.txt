@@ -1,0 +1,242 @@
+
+
+
+Here is a detailed line-by-line explanation of your code, covering Serial vs Parallel execution, and a complete guide to OpenMP functions.
+
+DETAILED EXPLANATION OF THE CODE
+SECTION 1: HEADER FILES (Preprocessor Directives)
+c
+#include <stdio.h>
+Aspect	Explanation
+Serial	Used for input/output operations like printf()
+Parallel	Same usage; no parallel effect
+Purpose	Standard Input-Output library. Provides functions for printing results to console
+c
+#include <stdlib.h>
+Aspect	Explanation
+Serial	Used for rand(), srand(), NULL
+Parallel	Same usage; random number generation is sequential
+Purpose	Standard Library. Provides random number generation and memory management functions
+c
+#include <omp.h>
+Aspect	Explanation
+Serial	Has no effect; program runs as single thread
+Parallel	CRITICAL - Provides all OpenMP parallel programming constructs
+Purpose	OpenMP header. Enables parallel directives, runtime functions, and synchronization
+c
+#include <time.h>
+Aspect	Explanation
+Serial	Used for time() function to seed random generator
+Parallel	Same usage; typically called sequentially before parallel region
+Purpose	Time library. Provides time(NULL) to get current timestamp for varied random numbers
+c
+#define SIZE 100000
+Aspect	Explanation
+Serial	Defines array size at compile time
+Parallel	Same; determines how many iterations the parallel loop will execute
+Purpose	Macro that replaces SIZE with 100000 before compilation. Defines total number of array elements
+SECTION 2: MAIN FUNCTION & VARIABLE DECLARATION
+c
+int main() {
+Aspect	Explanation
+Serial	Program entry point executed by main thread
+Parallel	Master thread (thread 0) starts; parallel regions spawn worker threads
+Purpose	Beginning of the program. Returns integer status code (0 = success)
+c
+int arr[SIZE];
+Aspect	Explanation
+Serial	Static array of 100,000 integers allocated on stack
+Parallel	Shared array; all threads can access all elements
+Purpose	Declares array to hold 100,000 integer values. Memory is contiguous (sequential memory locations)
+SECTION 3: ARRAY INITIALIZATION
+c
+srand(time(NULL));
+Aspect	Explanation
+Serial	Seeds random number generator with current time
+Parallel	Must be called BEFORE parallel region; calling inside parallel region causes race condition
+Purpose	Initializes pseudo-random generator. time(NULL) returns current seconds since 1970. Without this, rand() always generates same sequence
+Line-by-line breakdown:
+
+time(NULL) → Returns current timestamp as time_t (e.g., 1700000000)
+
+srand() → Uses that value to seed the random generator
+
+Result → Each program run generates different random numbers
+
+c
+for(int i = 0; i < SIZE; i++) {
+Aspect	Explanation
+Serial	Single thread executes all 100,000 iterations sequentially
+Parallel	In parallel version, iterations are distributed across threads
+Purpose	Loop control: starts at 0, increments by 1, stops when i reaches 100,000
+Time Complexity (Serial): O(SIZE) = 100,000 operations
+
+c
+arr[i] = rand() % 1000;
+Aspect	Explanation
+Serial	Generates random number between 0 and 999 and stores in array
+Parallel	rand() is NOT thread-safe! Should remain sequential to avoid issues
+Purpose	rand() → returns integer between 0 and RAND_MAX (usually 32767). % 1000 → limits value to 0-999
+SECTION 4: REDUCTION VARIABLES INITIALIZATION
+c
+int min = arr[0];
+int max = arr[0];
+long long sum = 0;
+double avg;
+Variable	Type	Initial Value	Purpose
+min	int	First array element	Will store minimum value after reduction
+max	int	First array element	Will store maximum value after reduction
+sum	long long	0	Accumulates total; long long prevents overflow (can store up to ~9 quintillion)
+avg	double	Uninitialized	Will store average after calculation
+Why use long long for sum?
+
+int (4 bytes) max = 2,147,483,647
+
+100,000 elements × 999 max value = 99,900,000 (safe for int)
+
+But with larger arrays, long long (8 bytes) is safer
+
+SECTION 5: TIMING VARIABLES
+c
+double start, end;
+Aspect	Explanation
+Serial	Store start and end timestamps
+Parallel	Must be private to avoid race; used outside parallel region
+Purpose	Variables to hold time measurements in seconds (floating-point)
+SECTION 6: START TIMER
+c
+start = omp_get_wtime();
+Aspect	Explanation
+Serial	Returns wall-clock time in seconds
+Parallel	Thread-safe; can be called from any thread
+Purpose	OpenMP function that returns elapsed wall-clock time (not CPU time). Returns double representing seconds since an arbitrary point
+OpenMP Function - omp_get_wtime():
+
+c
+double omp_get_wtime(void);
+Returns: Current wall-clock time in seconds
+
+Used for: Performance measurement
+
+Thread-safe: Yes
+
+Resolution: Typically microseconds or nanoseconds
+
+SECTION 7: PARALLEL REDUCTION (THE CORE)
+The Pragma Directive
+c
+#pragma omp parallel for reduction(+:sum) reduction(min:min) reduction(max:max)
+This is the heart of parallel computing in this program. Let me break it down:
+
+Component	Explanation
+#pragma omp	OpenMP compiler directive prefix
+parallel	Creates a team of threads
+for	Distributes loop iterations among threads
+reduction(+:sum)	Sum operation: private copy initialized to 0, combined with +
+reduction(min:min)	Min operation: private copy initialized to MAX, combined with min
+reduction(max:max)	Max operation: private copy initialized to MIN, combined with max
+Serial vs Parallel Execution Comparison
+Aspect	SERIAL (without pragma)	PARALLEL (with pragma)
+Number of threads	1	Multiple (default = CPU cores)
+min variable	Single shared variable	Each thread has private copy
+max variable	Single shared variable	Each thread has private copy
+sum variable	Single shared variable	Each thread has private copy
+Race condition	Not applicable (single thread)	PREVENTED by reduction clause
+Execution speed	Slow for large SIZE	Fast (near N/threads time)
+Correctness	Always correct	Always correct (reduction ensures)
+What Happens During Parallel Execution:
+text
+Initial State:
+Thread 0 gets private copy: sum0=0, min0=INT_MAX, max0=INT_MIN
+Thread 1 gets private copy: sum1=0, min1=INT_MAX, max1=INT_MIN
+Thread 2 gets private copy: sum2=0, min2=INT_MAX, max2=INT_MIN
+Thread 3 gets private copy: sum3=0, min3=INT_MAX, max3=INT_MIN
+
+Work Distribution (Example with 4 threads):
+Thread 0 processes indices 0-24999
+Thread 1 processes indices 25000-49999
+Thread 2 processes indices 50000-74999
+Thread 3 processes indices 75000-99999
+
+After Loop:
+Thread 0 result: sum0, min0, max0
+Thread 1 result: sum1, min1, max1
+Thread 2 result: sum2, min2, max2
+Thread 3 result: sum3, min3, max3
+
+Reduction (Combining):
+Final sum = sum0 + sum1 + sum2 + sum3
+Final min = min(min0, min1, min2, min3)
+Final max = max(max0, max1, max2, max3)
+c
+for(int i = 0; i < SIZE; i++) {
+Aspect	Explanation
+Serial	i goes 0→1→2→...→99999
+Parallel	Each thread gets a subset of i values (chunk)
+Purpose	Loop header. In parallel mode, iterations are divided automatically
+c
+sum += arr[i];
+Aspect	Explanation
+Serial	sum = sum + arr[i] (single thread, safe)
+Parallel	Each thread updates its PRIVATE copy of sum
+Purpose	Accumulates total. No race condition because each thread has private copy
+c
+if(arr[i] < min)
+    min = arr[i];
+Aspect	Explanation
+Serial	Checks and updates global min
+Parallel	Checks and updates thread's private min
+Purpose	Finds minimum value in thread's assigned chunk
+c
+if(arr[i] > max)
+    max = arr[i];
+Aspect	Explanation
+Serial	Checks and updates global max
+Parallel	Checks and updates thread's private max
+Purpose	Finds maximum value in thread's assigned chunk
+SECTION 8: AVERAGE CALCULATION & END TIMER
+c
+avg = (double)sum / SIZE;
+Aspect	Explanation
+Serial	Division operation
+Parallel	Performed sequentially AFTER reduction (correct approach)
+Purpose	Calculates average. (double) cast prevents integer division truncation
+Why Average is calculated outside parallel loop:
+
+Average = Sum / Count
+
+This is one sequential division
+
+Doing average inside parallel loop would cause precision issues
+
+This is the standard HPC pattern
+
+c
+end = omp_get_wtime();
+Aspect	Explanation
+Serial	Captures end timestamp
+Parallel	Called after parallel region by master thread
+Purpose	Records time after parallel computation completes
+SECTION 9: OUTPUT RESULTS
+c
+printf("Minimum: %d\n", min);
+printf("Maximum: %d\n", max);
+printf("Sum: %lld\n", sum);
+printf("Average: %f\n", avg);
+printf("Execution Time: %f seconds\n", end - start);
+Format Specifier	Variable	Purpose
+%d	min, max	Prints integer values
+%lld	sum	Prints long long integer
+%f	avg, end-start	Prints floating-point values
+COMPLETE OPENMP FUNCTIONS REFERENCE
+Core OpenMP Functions (from <omp.h>)
+Function	Syntax	Description
+omp_get_wtime()	double omp_get_wtime(void)	Returns elapsed wall-clock time in seconds
+omp_get_num_threads()	int omp_get_num_threads(void)	Returns number of threads in current parallel region
+omp_get_thread_num()	int omp_get_thread_num(void)	Returns unique ID of calling thread (0 to N-1)
+omp_set_num_threads()	void omp_set_num_threads(int num)	Sets number of threads for parallel regions
+omp_get_max_threads()	int omp_get_max_threads(void)	Returns maximum number of threads available
+omp_in_parallel()	int omp_in_parallel(void)	Returns non-zero if called from parallel region
+omp_get_num_procs()	int omp_get_num_procs(void)	Returns number of processors/cores available
+omp_get_wtick()	double omp_get_wtick(void)	Returns timer precision in seconds
+Example Usage of Additional Functions:
